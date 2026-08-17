@@ -42,6 +42,12 @@ async function connectToMongoDB() {
       res.send(result)
     })
 
+    app.post('/add-room', async(req, res) => {
+      const addedRoomData =  req.body;
+      const result = await roomCollection.insertOne(addedRoomData)
+      res.send(result)
+    })
+
     return client;
   } catch (err) {
     console.dir(err);
