@@ -1,21 +1,17 @@
 // const dns = require("node:dns");
 // dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
-const {MongoClient} = require("mongodb")
+const { MongoClient, ObjectId } = require("mongodb");
 
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
 
 dotenv.config();
 const port = process.env.PORT;
-const app = express()
+const app = express();
 app.use(cors());
 app.use(express.json());
-
-
-
-
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
@@ -27,7 +23,6 @@ async function connectToMongoDB() {
     const db = client.db("StudyNook");
     const roomCollection = db.collection("rooms");
 
-
     app.get("/", async (req, res) => {
       const result = await roomCollection
         .find()
@@ -37,16 +32,24 @@ async function connectToMongoDB() {
 
       res.send(result);
     });
-    app.get("/rooms", async(req,res) => {
+    app.get("/rooms", async (req, res) => {
       const result = await roomCollection.find().toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    app.post('/add-room', async(req, res) => {
-      const addedRoomData =  req.body;
-      const result = await roomCollection.insertOne(addedRoomData)
+    app.get("/rooms/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await roomCollection.findOne({
+        _id: new ObjectId(id),
+      });
       res.send(result)
-    })
+    });
+
+    app.post("/add-room", async (req, res) => {
+      const addedRoomData = req.body;
+      const result = await roomCollection.insertOne(addedRoomData);
+      res.send(result);
+    });
 
     return client;
   } catch (err) {
@@ -59,13 +62,11 @@ async function connectToMongoDB() {
 //   await client.close();
 // }
 
-
-
-connectToMongoDB(); 
+connectToMongoDB();
 // app.get('/', (req, res) => {
 //   res.send('StudyNook Server is running...!')
 // })
 
 app.listen(port, () => {
-  console.log(`app listening on port ${port}`)
-})
+  console.log(`app listening on port ${port}`);
+});
