@@ -22,6 +22,7 @@ async function connectToMongoDB() {
 
     const db = client.db("StudyNook");
     const roomCollection = db.collection("rooms");
+    const bookingCollection = db.collection("booking");
 
     app.get("/", async (req, res) => {
       const result = await roomCollection
@@ -32,11 +33,14 @@ async function connectToMongoDB() {
 
       res.send(result);
     });
+
+    // All rooms
     app.get("/rooms", async (req, res) => {
       const result = await roomCollection.find().toArray();
       res.send(result);
     });
 
+    // single room
     app.get("/rooms/:id", async (req, res) => {
       const { id } = req.params;
       const result = await roomCollection.findOne({
@@ -45,6 +49,14 @@ async function connectToMongoDB() {
       res.send(result)
     });
 
+    // POST single room (add my bookings)
+    app.post("/bookings", async(req, res) => {
+      const bookingData = req.body;
+      const result = await bookingCollection.insertOne(bookingData);
+      res.send(result)
+    })
+    
+    // Add room
     app.post("/add-room", async (req, res) => {
       const addedRoomData = req.body;
       const result = await roomCollection.insertOne(addedRoomData);
