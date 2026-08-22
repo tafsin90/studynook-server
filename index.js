@@ -49,16 +49,55 @@ async function connectToMongoDB() {
       res.send(result)
     });
 
-    // POST single room (add my bookings)
+    // update room
+    app.patch('/rooms/:id', async(req,res) => {
+      const {id} = req.params;
+      const updatedRoom = req.body;
+      const result = await roomCollection.updateOne(
+        {_id: new ObjectId(id)},
+        { $set: updatedRoom},
+      );
+      res.send(result);
+    })
+
+    // Delete Room 
+    app.delete('/rooms/:id', async(req, res) => {
+      const {id} = req.params;
+      const result = await roomCollection.deleteOne({
+        _id: new ObjectId(id)
+      })
+      res.send(result);
+    })
+
+    // POST add my-bookings
     app.post("/bookings", async(req, res) => {
       const bookingData = req.body;
+      const {roomId, date, startHour, endHour} = bookingData
+      const conflict = await bookingCollection.findOne({
+        roomId: roomId,
+        date: date,
+        startHour: { $lt: endHour },
+        endHour: { $gt: startHour },
+      });
+
+      if (conflict) {
+        return res.status(409).send({
+          message: "This room is already booked for the selected date and time.",
+        });
+      }
+
       const result = await bookingCollection.insertOne(bookingData);
+      await roomCollection.updateOne(
+        { _id: new ObjectId(bookingData.roomId) },
+        { $inc: { bookingCount: 1 } }
+      );
       res.send(result)
     })
+
     
     // Add room
     app.post("/add-room", async (req, res) => {
-      const addedRoomData = req.body;
+      const addedRoomData = req.body; 
       const result = await roomCollection.insertOne(addedRoomData);
       res.send(result);
     });
