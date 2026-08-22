@@ -46,33 +46,44 @@ async function connectToMongoDB() {
       const result = await roomCollection.findOne({
         _id: new ObjectId(id),
       });
-      res.send(result)
+      res.send(result);
     });
 
     // update room
-    app.patch('/rooms/:id', async(req,res) => {
-      const {id} = req.params;
+    app.patch("/rooms/:id", async (req, res) => {
+      const { id } = req.params;
       const updatedRoom = req.body;
       const result = await roomCollection.updateOne(
-        {_id: new ObjectId(id)},
-        { $set: updatedRoom},
+        { _id: new ObjectId(id) },
+        { $set: updatedRoom },
       );
       res.send(result);
-    })
+    });
 
-    // Delete Room 
-    app.delete('/rooms/:id', async(req, res) => {
-      const {id} = req.params;
+    // Delete Room
+    app.delete("/rooms/:id", async (req, res) => {
+      const { id } = req.params;
+      const { userId } = req.body;
+      const room = await roomCollection.findOne({ _id: new ObjectId(id) });
+
+      // Ownership check
+      if (room.userId !== userId) {
+        return res.status(403).send({ message: "You do not own the room" });
+      }
+      // Delete the related bookings
+      await bookingCollection.deleteMany({ roomId: id });
+
+      // Delete the room itself
       const result = await roomCollection.deleteOne({
-        _id: new ObjectId(id)
-      })
+        _id: new ObjectId(id),
+      });
       res.send(result);
-    })
+    });
 
     // POST add my-bookings
-    app.post("/bookings", async(req, res) => {
+    app.post("/bookings", async (req, res) => {
       const bookingData = req.body;
-      const {roomId, date, startHour, endHour} = bookingData
+      const { roomId, date, startHour, endHour } = bookingData;
       const conflict = await bookingCollection.findOne({
         roomId: roomId,
         date: date,
@@ -82,22 +93,22 @@ async function connectToMongoDB() {
 
       if (conflict) {
         return res.status(409).send({
-          message: "This room is already booked for the selected date and time.",
+          message:
+            "This room is already booked for the selected date and time.",
         });
       }
 
       const result = await bookingCollection.insertOne(bookingData);
       await roomCollection.updateOne(
         { _id: new ObjectId(bookingData.roomId) },
-        { $inc: { bookingCount: 1 } }
+        { $inc: { bookingCount: 1 } },
       );
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    
     // Add room
     app.post("/add-room", async (req, res) => {
-      const addedRoomData = req.body; 
+      const addedRoomData = req.body;
       const result = await roomCollection.insertOne(addedRoomData);
       res.send(result);
     });
